@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.*;
 import com.udacity.vehicles.client.maps.MapsClient;
 import com.udacity.vehicles.client.prices.PriceClient;
@@ -28,9 +30,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.json.JacksonTester;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.hateoas.Resource;
+import org.springframework.hateoas.Resources;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 /** Implements testing of the CarController class. */
 @RunWith(SpringRunner.class)
@@ -84,14 +89,17 @@ public class CarControllerTest {
   public void listCars() throws Exception {
     Car car = getCar();
     car.setId(1L);
-    mvc.perform(get(new URI("/cars")).accept(MediaType.APPLICATION_JSON_UTF8))
+    MvcResult mvcResult = mvc.perform(get(new URI("/cars")).accept(MediaType.APPLICATION_JSON_UTF8))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$._embedded.carList").isArray())
         .andExpect(jsonPath("$._embedded.carList").value(Matchers.hasSize(1)))
-        .andExpect(jsonPath("$._embedded.carList[0].id").value(Matchers.is(1)));
+        .andExpect(jsonPath("$._embedded.carList[0].id").value(Matchers.is(1)))
+            .andReturn();
     // ideally i would like to extract the embedded car and do a deep compare but both Gson and
-    // Jackson
-    // refuse to deserialize Resources<Resource<Car>>.
+    // Jackson refuse to deserialize Resources<Resource<Car>>
+    String json = mvcResult.getResponse().getContentAsString();
+    ObjectMapper objectMapper = new ObjectMapper();
+    Resources<Resource<Car>> resources = objectMapper.readValue(json, new TypeReference<Resources<Resource<Car>>>() {});
 
   }
 
