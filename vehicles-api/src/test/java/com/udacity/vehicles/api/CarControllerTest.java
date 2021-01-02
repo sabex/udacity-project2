@@ -1,15 +1,15 @@
-/* (C)2020 */
+/* (C)2020-2021 */
 package com.udacity.vehicles.api;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,11 +18,13 @@ import com.udacity.vehicles.client.prices.PriceClient;
 import com.udacity.vehicles.domain.Condition;
 import com.udacity.vehicles.domain.Location;
 import com.udacity.vehicles.domain.car.Car;
+import com.udacity.vehicles.domain.car.CarResources;
 import com.udacity.vehicles.domain.car.Details;
 import com.udacity.vehicles.domain.manufacturer.Manufacturer;
 import com.udacity.vehicles.service.CarService;
 import java.net.URI;
 import java.util.Collections;
+import lombok.extern.slf4j.Slf4j;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,6 +45,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @SpringBootTest
 @AutoConfigureMockMvc
 @AutoConfigureJsonTesters
+@Slf4j
 public class CarControllerTest {
 
   @Autowired private MockMvc mvc;
@@ -54,6 +57,9 @@ public class CarControllerTest {
   @MockBean private PriceClient priceClient;
 
   @MockBean private MapsClient mapsClient;
+
+  private ObjectMapper mapper =
+          new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
   /** Creates pre-requisites for testing, such as an example car. */
   @Before
@@ -89,17 +95,21 @@ public class CarControllerTest {
    */
   @Test
   public void listCars() throws Exception {
-    Car car = getCar();
-    car.setId(1L);
-    mvc.perform(get(new URI("/cars")).accept(MediaType.APPLICATION_JSON_UTF8))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$._embedded.carList").isArray())
-        .andExpect(jsonPath("$._embedded.carList").value(Matchers.hasSize(1)))
-        .andExpect(jsonPath("$._embedded.carList[0].id").value(Matchers.is(1)));
-    // ideally i would like to extract the embedded car and do a deep compare but both Gson and
-    // Jackson
-    // refuse to deserialize Resources<Resource<Car>>.
+    Car expectedCar = getCar();
+    expectedCar.setId(1L);
+    MvcResult mvcResult =
+        mvc.perform(get(new URI("/cars")).accept(MediaType.APPLICATION_JSON_UTF8))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$._embedded.carList").isArray())
+            .andExpect(jsonPath("$._embedded.carList").value(Matchers.hasSize(1)))
+            .andExpect(jsonPath("$._embedded.carList[0].id").value(Matchers.is(1)))
+            .andReturn();
     verify(carService, times(1)).list();
+
+    CarResources resources =
+        mapper.readValue(mvcResult.getResponse().getContentAsString(), CarResources.class);
+    Car carResult = resources.get_embedded().getCarList().get(0);
+    assertEquals(expectedCar, carResult);
   }
 
   /**
@@ -109,18 +119,17 @@ public class CarControllerTest {
    */
   @Test
   public void findCar() throws Exception {
-    Car car = getCar();
-    car.setId(1L);
-    MvcResult result = mvc.perform(get(new URI("/cars/1")).accept(MediaType.APPLICATION_JSON_UTF8))
+    Car expectedCar = getCar();
+    expectedCar.setId(1L);
+    MvcResult result =
+        mvc.perform(get(new URI("/cars/1")).accept(MediaType.APPLICATION_JSON_UTF8))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(Matchers.is(1)))
             .andReturn();
     verify(carService, times(1)).findById(any());
 
-    ObjectMapper mapper = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     Car resultCar = mapper.readValue(result.getResponse().getContentAsString(), Car.class);
-    assertEquals(car, resultCar);
+    assertEquals(expectedCar, resultCar);
   }
 
   /**
@@ -130,8 +139,7 @@ public class CarControllerTest {
    */
   @Test
   public void deleteCar() throws Exception {
-    mvc.perform(delete(new URI("/cars/1")))
-            .andExpect(status().isNoContent());
+    mvc.perform(delete(new URI("/cars/1"))).andExpect(status().isNoContent());
     verify(carService, times(1)).delete(any());
   }
   /**
@@ -150,7 +158,6 @@ public class CarControllerTest {
                 .accept(MediaType.APPLICATION_JSON_UTF8))
         .andExpect(status().isOk());
     verify(carService, times(1)).save(any());
-
   }
 
   /**
