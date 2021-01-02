@@ -1,6 +1,8 @@
 package com.udacity.vehicles.domain.car;
 
 import com.udacity.vehicles.domain.manufacturer.Manufacturer;
+import lombok.EqualsAndHashCode;
+
 import javax.persistence.Embeddable;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotBlank;
@@ -11,6 +13,7 @@ import javax.validation.constraints.NotNull;
  * along with related methods for access and setting.
  */
 @Embeddable
+@EqualsAndHashCode
 public class Details {
 
     @NotBlank

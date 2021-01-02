@@ -1,5 +1,7 @@
 package com.udacity.vehicles.domain;
 
+import lombok.EqualsAndHashCode;
+
 import javax.persistence.Embeddable;
 import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
@@ -11,6 +13,7 @@ import javax.validation.constraints.NotNull;
  * the maps API.
  */
 @Embeddable
+@EqualsAndHashCode
 public class Location {
 
     @NotNull

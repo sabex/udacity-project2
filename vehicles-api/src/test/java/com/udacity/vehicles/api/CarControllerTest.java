@@ -1,6 +1,7 @@
 /* (C)2020 */
 package com.udacity.vehicles.api;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
@@ -9,6 +10,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import static org.mockito.Mockito.verify;
+
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.udacity.vehicles.client.maps.MapsClient;
 import com.udacity.vehicles.client.prices.PriceClient;
 import com.udacity.vehicles.domain.Condition;
@@ -32,6 +36,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 /** Implements testing of the CarController class. */
 @RunWith(SpringRunner.class)
@@ -106,10 +111,16 @@ public class CarControllerTest {
   public void findCar() throws Exception {
     Car car = getCar();
     car.setId(1L);
-    mvc.perform(get(new URI("/cars/1")).accept(MediaType.APPLICATION_JSON_UTF8))
+    MvcResult result = mvc.perform(get(new URI("/cars/1")).accept(MediaType.APPLICATION_JSON_UTF8))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value(Matchers.is(1)));
+            .andExpect(jsonPath("$.id").value(Matchers.is(1)))
+            .andReturn();
     verify(carService, times(1)).findById(any());
+
+    ObjectMapper mapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    Car resultCar = mapper.readValue(result.getResponse().getContentAsString(), Car.class);
+    assertEquals(car, resultCar);
   }
 
   /**

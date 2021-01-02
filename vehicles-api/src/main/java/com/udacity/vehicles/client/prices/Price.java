@@ -1,10 +1,13 @@
 package com.udacity.vehicles.client.prices;
 
+import lombok.EqualsAndHashCode;
+
 import java.math.BigDecimal;
 
 /**
  * Represents the price of a given vehicle, including currency.
  */
+@EqualsAndHashCode
 public class Price {
 
     private String currency;
