@@ -36,7 +36,12 @@ public class CarService {
    * @return a list of all vehicles in the CarRepository
    */
   public List<Car> list() {
-    return repository.findAll();
+    List<Car> carList = repository.findAll();
+    for (Car car: carList) {
+      car.setPrice(priceClient.getPrice(car.getId()));
+      car.setLocation(mapsClient.getAddress(car.getLocation()));
+    }
+    return carList;
   }
 
   /**
@@ -85,11 +90,13 @@ public class CarService {
    * @param id the ID number of the car to delete
    */
   public void delete(Long id) {
-    /**
-     * TODO: Find the car by ID from the `repository` if it exists. If it does not exist, throw a
-     * CarNotFoundException
-     */
 
-    /** TODO: Delete the car from the repository. */
+    Optional<Car> optionalCar = repository.findById(id);
+    if(optionalCar.isPresent()) {
+      repository.delete(optionalCar.get());
+    }
+    else {
+      throw new CarNotFoundException(String.format("Vehicle with id %s not found", id));
+    }
   }
 }
