@@ -1,15 +1,19 @@
 /* (C)2020 */
 package com.udacity.vehicles.api;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import static org.mockito.Mockito.verify;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.*;
 import com.udacity.vehicles.client.maps.MapsClient;
 import com.udacity.vehicles.client.prices.PriceClient;
 import com.udacity.vehicles.domain.Condition;
@@ -78,6 +82,7 @@ public class CarControllerTest {
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .accept(MediaType.APPLICATION_JSON_UTF8))
         .andExpect(status().isCreated());
+    verify(carService, times(1)).save(any());
   }
 
   /**
@@ -89,18 +94,20 @@ public class CarControllerTest {
   public void listCars() throws Exception {
     Car car = getCar();
     car.setId(1L);
-    MvcResult mvcResult = mvc.perform(get(new URI("/cars")).accept(MediaType.APPLICATION_JSON_UTF8))
+    MvcResult result = mvc.perform(get(new URI("/cars")).accept(MediaType.APPLICATION_JSON_UTF8))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$._embedded.carList").isArray())
         .andExpect(jsonPath("$._embedded.carList").value(Matchers.hasSize(1)))
-        .andExpect(jsonPath("$._embedded.carList[0].id").value(Matchers.is(1)))
-            .andReturn();
+        .andExpect(jsonPath("$._embedded.carList[0].id").value(Matchers.is(1))).andReturn();
     // ideally i would like to extract the embedded car and do a deep compare but both Gson and
-    // Jackson refuse to deserialize Resources<Resource<Car>>
-    String json = mvcResult.getResponse().getContentAsString();
-    ObjectMapper objectMapper = new ObjectMapper();
-    Resources<Resource<Car>> resources = objectMapper.readValue(json, new TypeReference<Resources<Resource<Car>>>() {});
-
+    // Jackson
+    // refuse to deserialize Resources<Resource<Car>>.
+    verify(carService, times(1)).list();
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    Resources<Resource<Car>> carResource = mapper.readValue(result.getResponse().getContentAsString(),
+            new TypeReference<Resources<Resource<Car>>>(){});
+    System.out.println("here");
   }
 
   /**
@@ -110,10 +117,18 @@ public class CarControllerTest {
    */
   @Test
   public void findCar() throws Exception {
-    /**
-     * TODO: Add a test to check that the `get` method works by calling a vehicle by ID. This should
-     * utilize the car from `getCar()` below.
-     */
+    Car car = getCar();
+    car.setId(1L);
+    MvcResult result = mvc.perform(get(new URI("/cars/1")).accept(MediaType.APPLICATION_JSON_UTF8))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(Matchers.is(1))).andReturn();
+    verify(carService, times(1)).findById(any());
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    Resource<Car> carResource = mapper.readValue(result.getResponse().getContentAsString(),
+            new TypeReference<Resource<Car>>(){});
+    Car resultCar = carResource.getContent();
+    assertEquals(car, resultCar);
   }
 
   /**
@@ -123,10 +138,9 @@ public class CarControllerTest {
    */
   @Test
   public void deleteCar() throws Exception {
-    /**
-     * TODO: Add a test to check whether a vehicle is appropriately deleted when the `delete` method
-     * is called from the Car Controller. This should utilize the car from `getCar()` below.
-     */
+    mvc.perform(delete(new URI("/cars/1")))
+            .andExpect(status().isNoContent());
+    verify(carService, times(1)).delete(any());
   }
   /**
    * Tests the update of a single car by ID.
@@ -143,6 +157,8 @@ public class CarControllerTest {
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .accept(MediaType.APPLICATION_JSON_UTF8))
         .andExpect(status().isOk());
+    verify(carService, times(1)).save(any());
+
   }
 
   /**
