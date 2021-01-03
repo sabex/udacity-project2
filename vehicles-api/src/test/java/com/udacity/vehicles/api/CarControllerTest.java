@@ -1,8 +1,7 @@
 /* (C)2020-2021 */
 package com.udacity.vehicles.api;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
@@ -109,7 +108,8 @@ public class CarControllerTest {
     CarResources resources =
         mapper.readValue(mvcResult.getResponse().getContentAsString(), CarResources.class);
     Car carResult = resources.get_embedded().getCarList().get(0);
-    assertEquals(expectedCar, carResult);
+    // note the Car, Details, Location, Price and Manufacturer has lombok @EqualsAndHashCode so this is a deep compare
+    assertTrue(expectedCar.equals(carResult));
   }
 
   /**
@@ -129,7 +129,8 @@ public class CarControllerTest {
     verify(carService, times(1)).findById(any());
 
     Car resultCar = mapper.readValue(result.getResponse().getContentAsString(), Car.class);
-    assertEquals(expectedCar, resultCar);
+    // note the Car, Details, Location, Price and Manufacturer has lombok @EqualsAndHashCode so this is a deep compare
+    assertTrue(expectedCar.equals(resultCar));
   }
 
   /**
